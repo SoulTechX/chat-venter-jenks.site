@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Venter Jenks - Iniciar Sesión</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="login-body">
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <div class="logo">VJ</div>
+        <h1>Portal Interno</h1>
+        <p>Venter Jenks</p>
+      </div>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="username">Usuario</label>
+          <input type="text" id="username" name="username" placeholder="Ingrese su usuario" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" name="password" placeholder="••••••••" required>
+        </div>
+        <div id="error-message" class="error-message"></div>
+        <button type="submit" class="btn btn-primary btn-block">Ingresar</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check if already logged in
+      if (sessionStorage.getItem('vj_token')) {
+        window.location.href = 'app.html';
+      }
+
+      const form = document.getElementById('login-form');
+      const errorMsg = document.getElementById('error-message');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errorMsg.textContent = '';
+        errorMsg.style.display = 'none';
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        try {
+          const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            sessionStorage.setItem('vj_token', data.token);
+            sessionStorage.setItem('vj_user', JSON.stringify(data.user));
+            window.location.href = 'app.html';
+          } else {
+            errorMsg.textContent = data.error || 'Credenciales inválidas';
+            errorMsg.style.display = 'block';
+          }
+        } catch (error) {
+          errorMsg.textContent = 'Error de conexión. Intente nuevamente.';
+          errorMsg.style.display = 'block';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

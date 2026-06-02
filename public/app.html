@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Venter Jenks - Portal Interno</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-left">
+      <div class="logo">VJ</div>
+      <div class="nav-tabs">
+        <button class="nav-tab active" data-target="chat-view">
+          💬 Chat
+        </button>
+        <button class="nav-tab" data-target="tickets-view">
+          🎫 Tickets <span class="badge hidden" id="ticket-badge"></span>
+        </button>
+      </div>
+    </div>
+    <div class="nav-right">
+      <button id="theme-toggle" class="icon-btn" title="Alternar tema">
+        <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+      </button>
+      <div class="user-profile">
+        <div class="avatar" id="user-avatar">?</div>
+        <span class="user-name" id="user-name">Usuario</span>
+      </div>
+      <button id="logout-btn" class="icon-btn" title="Cerrar sesión">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    
+    <!-- CHAT VIEW -->
+    <section id="chat-view" class="view active">
+      <div class="chat-container">
+        
+        <div id="pinned-message-container" class="pinned-message hidden">
+          <div class="pinned-content">
+            <span class="pinned-label">📌 Mensaje Fijado</span>
+            <div id="pinned-text" class="pinned-text"></div>
+          </div>
+          <button id="unpin-btn" class="icon-btn unpin-btn">✕</button>
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+          <!-- Messages inserted here -->
+        </div>
+        
+        <div class="typing-indicator hidden" id="typing-indicator">
+          <span></span> está escribiendo...
+        </div>
+
+        <div class="chat-input-container">
+          <div id="reply-preview" class="reply-preview hidden">
+            <div class="reply-content">
+              <span id="reply-user" class="reply-user"></span>
+              <span id="reply-text" class="reply-text"></span>
+            </div>
+            <button id="cancel-reply-btn" class="icon-btn">✕</button>
+          </div>
+          <div class="input-row">
+            <div class="emoji-wrapper">
+              <button id="emoji-picker-btn" class="icon-btn">😊</button>
+              <div id="emoji-picker" class="emoji-picker hidden">
+                <!-- Emojis inserted here -->
+              </div>
+            </div>
+            <input type="text" id="chat-input" placeholder="Escribe un mensaje..." autocomplete="off">
+            <button id="send-btn" class="btn btn-primary send-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TICKETS VIEW -->
+    <section id="tickets-view" class="view hidden">
+      <div class="tickets-header">
+        <div class="view-toggles">
+          <button class="toggle-btn active" data-view="kanban">Kanban</button>
+          <button class="toggle-btn" data-view="calendar">Calendario</button>
+        </div>
+        <div class="ticket-filters">
+          <span class="filter-label">Filtrar por:</span>
+          <button class="filter-btn active" data-user="all">Todos</button>
+          <button class="filter-btn" data-user="Mati">Mati</button>
+          <button class="filter-btn" data-user="Gise">Gise</button>
+          <button class="filter-btn" data-user="Ema">Ema</button>
+          <button class="filter-btn" data-user="Guille">Guille</button>
+        </div>
+        <button class="btn btn-primary" id="new-ticket-btn">+ Nuevo Ticket</button>
+      </div>
+
+      <!-- KANBAN -->
+      <div id="kanban-view" class="sub-view active">
+        <div class="kanban-board">
+          
+          <div class="kanban-column" data-status="pendiente">
+            <h3 class="column-title">Pendiente <span class="count">0</span></h3>
+            <div class="kanban-cards drop-zone">
+              <!-- Cards here -->
+            </div>
+          </div>
+
+          <div class="kanban-column" data-status="en curso">
+            <h3 class="column-title">En Curso <span class="count">0</span></h3>
+            <div class="kanban-cards drop-zone">
+              <!-- Cards here -->
+            </div>
+          </div>
+
+          <div class="kanban-column" data-status="listo">
+            <h3 class="column-title">Listo <span class="count">0</span></h3>
+            <div class="kanban-cards drop-zone">
+              <!-- Cards here -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- CALENDAR -->
+      <div id="calendar-view" class="sub-view hidden">
+        <div class="calendar-container">
+          <div class="calendar-header-nav">
+            <button id="prev-month" class="icon-btn">◀</button>
+            <h2 id="current-month-year">Junio 2026</h2>
+            <button id="next-month" class="icon-btn">▶</button>
+          </div>
+          <div class="calendar-grid">
+            <div class="day-name">Dom</div>
+            <div class="day-name">Lun</div>
+            <div class="day-name">Mar</div>
+            <div class="day-name">Mié</div>
+            <div class="day-name">Jue</div>
+            <div class="day-name">Vie</div>
+            <div class="day-name">Sáb</div>
+            <!-- Days inserted here -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODALS -->
+  <div id="ticket-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">Nuevo Ticket</h2>
+        <button class="close-modal icon-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="ticket-form">
+          <input type="hidden" id="ticket-id">
+          
+          <div class="form-group">
+            <label>Título *</label>
+            <input type="text" id="ticket-title" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Asignado a</label>
+              <select id="ticket-assigned">
+                <option value="">Sin asignar</option>
+                <option value="Mati">Mati</option>
+                <option value="Gise">Gise</option>
+                <option value="Ema">Ema</option>
+                <option value="Guille">Guille</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Estado</label>
+              <select id="ticket-status">
+                <option value="pendiente">Pendiente</option>
+                <option value="en curso">En Curso</option>
+                <option value="listo">Listo</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Prioridad</label>
+              <select id="ticket-priority">
+                <option value="baja">Baja</option>
+                <option value="media" selected>Media</option>
+                <option value="alta">Alta</option>
+                <option value="urgente">Urgente</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Fecha Límite</label>
+              <input type="date" id="ticket-due">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Propiedad Asociada</label>
+            <input type="text" id="ticket-property" placeholder="Ej: Rivadavia 65">
+          </div>
+
+          <div class="form-group">
+            <label>Etiquetas</label>
+            <div class="tags-container" id="tags-selector">
+              <label class="tag-checkbox"><input type="checkbox" value="alquiler"> Alquiler</label>
+              <label class="tag-checkbox"><input type="checkbox" value="venta"> Venta</label>
+              <label class="tag-checkbox"><input type="checkbox" value="tasación"> Tasación</label>
+              <label class="tag-checkbox"><input type="checkbox" value="legal"> Legal</label>
+              <label class="tag-checkbox"><input type="checkbox" value="contable"> Contable</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Descripción / Notas</label>
+            <textarea id="ticket-desc" rows="4"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" id="delete-ticket-btn" style="display:none;">Eliminar</button>
+            <button type="submit" class="btn btn-primary">Guardar Ticket</button>
+          </div>
+        </form>
+
+        <div id="comments-section" class="comments-section hidden">
+          <h3>Comentarios</h3>
+          <div class="comments-list" id="comments-list"></div>
+          <div class="add-comment">
+            <input type="text" id="new-comment" placeholder="Escribe un comentario...">
+            <button class="btn btn-primary" id="send-comment-btn">Enviar</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="calendar-day-modal" class="modal hidden">
+    <div class="modal-content small-modal">
+      <div class="modal-header">
+        <h2 id="day-modal-title">Tickets del día</h2>
+        <button class="close-modal icon-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="day-tickets-list" class="day-tickets-list">
+          <!-- Tickets for the day -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPLICATION LOGIC -->
+  <script>
+    // --- State & Auth ---
+    const token = sessionStorage.getItem('vj_token');
+    const userStr = sessionStorage.getItem('vj_user');
+    
+    if (!token || !userStr) {
+      window.location.href = 'login.html';
+    }
+    
+    const currentUser = JSON.parse(userStr);
+    
+    // Set user info in UI
+    const avatarEl = document.getElementById('user-avatar');
+    avatarEl.textContent = currentUser.username.charAt(0).toUpperCase();
+    avatarEl.style.backgroundColor = currentUser.color;
+    document.getElementById('user-name').textContent = currentUser.username;
+
+    // Theme setup
+    const themeBtn = document.getElementById('theme-toggle');
+    const htmlEl = document.documentElement;
+    
+    const savedTheme = localStorage.getItem('vj_theme') || 'dark';
+    htmlEl.className = savedTheme;
+    
+    themeBtn.addEventListener('click', () => {
+      const isDark = htmlEl.classList.contains('dark');
+      htmlEl.className = isDark ? 'light' : 'dark';
+      localStorage.setItem('vj_theme', isDark ? 'light' : 'dark');
+    });
+
+    // Logout
+    document.getElementById('logout-btn').addEventListener('click', async () => {
+      try {
+        await fetch('/api/logout', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } catch(e) {}
+      sessionStorage.clear();
+      window.location.href = 'login.html';
+    });
+
+    // --- Navigation ---
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        
+        tab.classList.add('active');
+        const target = document.getElementById(tab.dataset.target);
+        target.classList.remove('hidden');
+        target.classList.add('active');
+
+        if(tab.dataset.target === 'tickets-view') {
+          document.getElementById('ticket-badge').classList.add('hidden');
+        }
+      });
+    });
+
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.sub-view').forEach(v => v.classList.add('hidden'));
+        document.querySelectorAll('.sub-view').forEach(v => v.classList.remove('active'));
+        
+        btn.classList.add('active');
+        const target = document.getElementById(`${btn.dataset.view}-view`);
+        target.classList.remove('hidden');
+        target.classList.add('active');
+      });
+    });
+
+    // --- Socket.io Chat ---
+    const socket = io({ auth: { token } });
+    
+    socket.on('connect_error', () => {
+      console.error('Socket connection failed');
+      sessionStorage.clear();
+      window.location.href = 'login.html';
+    });
+
+    // Chat UI Elements
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+    const typingInd = document.getElementById('typing-indicator');
+    
+    let replyToMsg = null;
+    let typingTimeout = null;
+
+    // Emojis
+    const emojis = ['👍','❤️','😂','😮','😢','🎉','🔥','✅','❌','👀','🙌','🙏','💪','💡','🚀','✨','😊','😅','😎','🤔','😡','🤮','🤯','🤷','🤦','💼','🏠','🔑','💰','📅'];
+    const emojiPicker = document.getElementById('emoji-picker');
+    const emojiBtn = document.getElementById('emoji-picker-btn');
+    
+    emojis.forEach(e => {
+      const span = document.createElement('span');
+      span.textContent = e;
+      span.onclick = () => {
+        chatInput.value += e;
+        emojiPicker.classList.add('hidden');
+        chatInput.focus();
+      };
+      emojiPicker.appendChild(span);
+    });
+
+    emojiBtn.onclick = (e) => {
+      e.stopPropagation();
+      emojiPicker.classList.toggle('hidden');
+    };
+    document.addEventListener('click', () => emojiPicker.classList.add('hidden'));
+
+    // Formatting date
+    function formatTime(iso) {
+      const d = new Date(iso);
+      return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+
+    // Render a single message
+    function renderMessage(msg) {
+      const isMine = msg.user === currentUser.username;
+      
+      const div = document.createElement('div');
+      div.className = `message ${isMine ? 'mine' : 'theirs'}`;
+      div.dataset.id = msg.id;
+
+      let replyHtml = '';
+      if (msg.replyTo) {
+        replyHtml = `
+          <div class="message-reply-preview">
+            <span class="reply-user">${msg.replyTo.user}</span>
+            <span class="reply-text">${msg.replyTo.text}</span>
+          </div>
+        `;
+      }
+
+      let reactionsHtml = '<div class="reactions-container">';
+      if (msg.reactions) {
+        for (const [emoji, users] of Object.entries(msg.reactions)) {
+          reactionsHtml += `<span class="reaction-pill" title="${users.join(', ')}" onclick="toggleReaction('${msg.id}', '${emoji}')">${emoji} <small>${users.length}</small></span>`;
+        }
+      }
+      reactionsHtml += '</div>';
+
+      const actionsHtml = `
+        <div class="message-actions">
+          <button class="action-btn" onclick="startReply('${msg.id}', '${msg.user}', '${msg.text.replace(/'/g, "\\'")}')">↩️</button>
+          <button class="action-btn" onclick="pinMessage('${msg.id}')">📌</button>
+          <div class="reaction-trigger">
+            <button class="action-btn">😊</button>
+            <div class="reaction-bar">
+              ${['👍','❤️','😂','😮','😢'].map(e => `<span onclick="toggleReaction('${msg.id}', '${e}')">${e}</span>`).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+
+      div.innerHTML = `
+        ${!isMine ? `<div class="message-avatar" style="background-color: ${msg.color}">${msg.avatar}</div>` : ''}
+        <div class="message-content">
+          ${!isMine ? `<div class="message-user" style="color: ${msg.color}">${msg.user}</div>` : ''}
+          ${replyHtml}
+          <div class="message-bubble" style="background-color: ${isMine ? msg.color : ''}">
+            ${msg.text}
+          </div>
+          <div class="message-time">${formatTime(msg.timestamp)}</div>
+          ${reactionsHtml}
+          ${actionsHtml}
+        </div>
+      `;
+      
+      chatMessages.appendChild(div);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Socket listeners
+    socket.on('initial_state', (data) => {
+      chatMessages.innerHTML = '';
+      data.messages.forEach(renderMessage);
+      updatePinned(data.pinnedMessage);
+    });
+
+    socket.on('new_message', (msg) => {
+      renderMessage(msg);
+    });
+
+    socket.on('user_typing', (data) => {
+      if (data.username !== currentUser.username) {
+        if (data.isTyping) {
+          typingInd.querySelector('span').textContent = data.username;
+          typingInd.classList.remove('hidden');
+        } else {
+          typingInd.classList.add('hidden');
+        }
+      }
+    });
+
+    socket.on('message_pinned', (data) => {
+      updatePinned(data.message);
+    });
+
+    socket.on('reaction_updated', (data) => {
+      const msgEl = document.querySelector(`.message[data-id="${data.messageId}"] .reactions-container`);
+      if (msgEl) {
+        let html = '';
+        for (const [emoji, users] of Object.entries(data.reactions)) {
+           html += `<span class="reaction-pill" title="${users.join(', ')}" onclick="toggleReaction('${data.messageId}', '${emoji}')">${emoji} <small>${users.length}</small></span>`;
+        }
+        msgEl.innerHTML = html;
+      }
+    });
+
+    // Chat Actions
+    function sendMessage() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+      
+      const data = { text };
+      if (replyToMsg) {
+        data.replyTo = replyToMsg;
+        cancelReply();
+      }
+      
+      socket.emit('send_message', data);
+      chatInput.value = '';
+      socket.emit('typing', { isTyping: false });
+    }
+
+    sendBtn.onclick = sendMessage;
+    chatInput.onkeypress = (e) => {
+      if (e.key === 'Enter') sendMessage();
+    };
+
+    chatInput.oninput = () => {
+      socket.emit('typing', { isTyping: true });
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        socket.emit('typing', { isTyping: false });
+      }, 1500);
+    };
+
+    // Globals for inline onclicks
+    window.startReply = (id, user, text) => {
+      replyToMsg = { id, user, text };
+      document.getElementById('reply-user').textContent = user;
+      document.getElementById('reply-text').textContent = text;
+      document.getElementById('reply-preview').classList.remove('hidden');
+      chatInput.focus();
+    };
+
+    window.cancelReply = () => {
+      replyToMsg = null;
+      document.getElementById('reply-preview').classList.add('hidden');
+    };
+    document.getElementById('cancel-reply-btn').onclick = window.cancelReply;
+
+    window.pinMessage = (messageId) => {
+      socket.emit('pin_message', { messageId });
+    };
+
+    document.getElementById('unpin-btn').onclick = () => {
+      socket.emit('pin_message', { messageId: null });
+    };
+
+    function updatePinned(msg) {
+      const container = document.getElementById('pinned-message-container');
+      if (msg) {
+        document.getElementById('pinned-text').textContent = `${msg.user}: ${msg.text}`;
+        container.classList.remove('hidden');
+      } else {
+        container.classList.add('hidden');
+      }
+    }
+
+    window.toggleReaction = (messageId, emoji) => {
+      socket.emit('add_reaction', { messageId, emoji });
+    };
+
+    // --- Tickets System ---
+    let allTickets = [];
+    let currentFilter = 'all';
+
+    async function fetchTickets() {
+      try {
+        const res = await fetch('/api/tickets', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        allTickets = await res.json();
+        renderKanban();
+        renderCalendar();
+      } catch (e) {
+        console.error('Error fetching tickets', e);
+      }
+    }
+
+    // Real-time assignment notification
+    socket.on('ticket_assigned', (data) => {
+      if (data.assignedTo === currentUser.username) {
+        // We are on chat tab? show badge
+        const tab = document.querySelector('.nav-tab[data-target="tickets-view"]');
+        if (!tab.classList.contains('active')) {
+          document.getElementById('ticket-badge').classList.remove('hidden');
+        }
+      }
+      // Refresh tickets
+      fetchTickets();
+    });
+
+    // Render Kanban
+    function renderKanban() {
+      const cols = document.querySelectorAll('.kanban-column .kanban-cards');
+      cols.forEach(c => c.innerHTML = '');
+      
+      const counts = { 'pendiente': 0, 'en curso': 0, 'listo': 0 };
+
+      const filtered = allTickets.filter(t => currentFilter === 'all' || t.assignedTo === currentFilter);
+
+      filtered.forEach(t => {
+        const col = document.querySelector(`.kanban-column[data-status="${t.status}"] .kanban-cards`);
+        if (col) {
+          counts[t.status]++;
+          
+          let priorityClass = t.priority === 'urgente' ? 'priority-urgent' : '';
+          let priorityColor = '#95a5a6';
+          if(t.priority === 'media') priorityColor = '#f1c40f';
+          if(t.priority === 'alta') priorityColor = '#e67e22';
+          if(t.priority === 'urgente') priorityColor = '#e74c3c';
+
+          const card = document.createElement('div');
+          card.className = `kanban-card ${priorityClass}`;
+          card.draggable = true;
+          card.dataset.id = t.id;
+          
+          // Drag events
+          card.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', t.id);
+            card.classList.add('dragging');
+          });
+          card.addEventListener('dragend', () => card.classList.remove('dragging'));
+          card.addEventListener('click', () => openTicketModal(t));
+
+          const tagsHtml = t.tags.map(tag => `<span class="tag tag-${tag}">${tag}</span>`).join('');
+          
+          let avatarHtml = '';
+          if (t.assignedTo) {
+             const u = Object.values(USERS).find(u => u.username === t.assignedTo) || { color: '#888' };
+             avatarHtml = `<div class="card-avatar" style="background-color: ${u.color}" title="${t.assignedTo}">${t.assignedTo.charAt(0)}</div>`;
+          }
+
+          card.innerHTML = `
+            <div class="priority-bar" style="background-color: ${priorityColor}"></div>
+            <div class="card-title">${t.title}</div>
+            ${t.linkedProperty ? `<div class="card-prop">🏠 ${t.linkedProperty}</div>` : ''}
+            <div class="card-tags">${tagsHtml}</div>
+            <div class="card-footer">
+              <span class="card-date">${t.dueDate ? t.dueDate.split('-').reverse().join('/') : ''}</span>
+              ${avatarHtml}
+            </div>
+          `;
+          col.appendChild(card);
+        }
+      });
+
+      document.querySelectorAll('.kanban-column').forEach(col => {
+        const status = col.dataset.status;
+        col.querySelector('.count').textContent = counts[status];
+      });
+    }
+
+    // Drag and drop setup
+    document.querySelectorAll('.drop-zone').forEach(zone => {
+      zone.addEventListener('dragover', e => {
+        e.preventDefault();
+        zone.classList.add('drag-over');
+      });
+      zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+      zone.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        zone.classList.remove('drag-over');
+        const id = e.dataTransfer.getData('text/plain');
+        const newStatus = zone.closest('.kanban-column').dataset.status;
+        
+        const ticket = allTickets.find(t => t.id === id);
+        if (ticket && ticket.status !== newStatus) {
+          ticket.status = newStatus;
+          renderKanban(); // optimistic update
+          
+          await fetch(`/api/tickets/${id}`, {
+            method: 'PUT',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}` 
+            },
+            body: JSON.stringify(ticket)
+          });
+          fetchTickets();
+        }
+      });
+    });
+
+    // Filtering
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.user;
+        renderKanban();
+        renderCalendar();
+      });
+    });
+
+    // --- Ticket Modal ---
+    const modal = document.getElementById('ticket-modal');
+    const form = document.getElementById('ticket-form');
+    
+    document.getElementById('new-ticket-btn').addEventListener('click', () => {
+      form.reset();
+      document.getElementById('ticket-id').value = '';
+      document.getElementById('modal-title').textContent = 'Nuevo Ticket';
+      document.getElementById('delete-ticket-btn').style.display = 'none';
+      document.getElementById('comments-section').classList.add('hidden');
+      
+      // Reset checkboxes
+      document.querySelectorAll('#tags-selector input').forEach(cb => cb.checked = false);
+      
+      modal.classList.remove('hidden');
+    });
+
+    document.querySelectorAll('.close-modal').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.closest('.modal').classList.add('hidden');
+      });
+    });
+
+    // Global constant for users lookup in frontend
+    const USERS = {
+      'mati': { username: 'Mati', color: '#4A90D9' },
+      'gise': { username: 'Gise', color: '#E67E22' },
+      'ema':  { username: 'Ema',  color: '#27AE60' },
+      'guille': { username: 'Guille', color: '#E74C3C' }
+    };
+
+    function openTicketModal(ticket) {
+      document.getElementById('modal-title').textContent = 'Editar Ticket';
+      document.getElementById('ticket-id').value = ticket.id;
+      document.getElementById('ticket-title').value = ticket.title;
+      document.getElementById('ticket-assigned').value = ticket.assignedTo || '';
+      document.getElementById('ticket-status').value = ticket.status;
+      document.getElementById('ticket-priority').value = ticket.priority;
+      document.getElementById('ticket-due').value = ticket.dueDate || '';
+      document.getElementById('ticket-property').value = ticket.linkedProperty || '';
+      document.getElementById('ticket-desc').value = ticket.description || '';
+      
+      // Set tags
+      document.querySelectorAll('#tags-selector input').forEach(cb => {
+        cb.checked = ticket.tags.includes(cb.value);
+      });
+
+      document.getElementById('delete-ticket-btn').style.display = 'block';
+      
+      // Comments
+      document.getElementById('comments-section').classList.remove('hidden');
+      renderComments(ticket.comments || []);
+
+      modal.classList.remove('hidden');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const id = document.getElementById('ticket-id').value;
+      
+      const tags = Array.from(document.querySelectorAll('#tags-selector input:checked')).map(cb => cb.value);
+      
+      const data = {
+        title: document.getElementById('ticket-title').value,
+        assignedTo: document.getElementById('ticket-assigned').value,
+        status: document.getElementById('ticket-status').value,
+        priority: document.getElementById('ticket-priority').value,
+        dueDate: document.getElementById('ticket-due').value,
+        linkedProperty: document.getElementById('ticket-property').value,
+        description: document.getElementById('ticket-desc').value,
+        tags: tags
+      };
+
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/api/tickets/${id}` : '/api/tickets';
+
+      await fetch(url, {
+        method,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        },
+        body: JSON.stringify(data)
+      });
+
+      modal.classList.add('hidden');
+      fetchTickets();
+    });
+
+    document.getElementById('delete-ticket-btn').addEventListener('click', async () => {
+      if(confirm('¿Seguro que deseas eliminar este ticket?')) {
+        const id = document.getElementById('ticket-id').value;
+        await fetch(`/api/tickets/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        modal.classList.add('hidden');
+        fetchTickets();
+      }
+    });
+
+    // Comments
+    function renderComments(comments) {
+      const list = document.getElementById('comments-list');
+      list.innerHTML = '';
+      comments.forEach(c => {
+        const u = Object.values(USERS).find(usr => usr.username === c.author) || { color: '#888' };
+        
+        const div = document.createElement('div');
+        div.className = 'comment';
+        div.innerHTML = `
+          <div class="comment-avatar" style="background-color: ${u.color}">${c.author.charAt(0)}</div>
+          <div class="comment-content">
+            <div class="comment-meta"><span class="author">${c.author}</span> <span class="time">${formatTime(c.timestamp)}</span></div>
+            <div class="comment-text">${c.content}</div>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+      list.scrollTop = list.scrollHeight;
+    }
+
+    document.getElementById('send-comment-btn').addEventListener('click', async () => {
+      const id = document.getElementById('ticket-id').value;
+      const input = document.getElementById('new-comment');
+      const content = input.value.trim();
+      
+      if(id && content) {
+        const res = await fetch(`/api/tickets/${id}/comments`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` 
+          },
+          body: JSON.stringify({ content })
+        });
+        
+        if (res.ok) {
+           input.value = '';
+           // Ideally we would just push and render, but fetching all is safer for now
+           fetchTickets().then(() => {
+              const t = allTickets.find(x => x.id === id);
+              if (t) renderComments(t.comments);
+           });
+        }
+      }
+    });
+
+    // --- Calendar System ---
+    let currentMonth = new Date().getMonth();
+    let currentYear = new Date().getFullYear();
+    const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+    function renderCalendar() {
+      const grid = document.querySelector('.calendar-grid');
+      // Keep only day names
+      const dayNames = grid.querySelectorAll('.day-name');
+      grid.innerHTML = '';
+      dayNames.forEach(d => grid.appendChild(d));
+
+      document.getElementById('current-month-year').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+
+      const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+      // Blanks
+      for(let i = 0; i < firstDay; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-day blank';
+        grid.appendChild(cell);
+      }
+
+      const filtered = allTickets.filter(t => currentFilter === 'all' || t.assignedTo === currentFilter);
+
+      for(let i = 1; i <= daysInMonth; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'calendar-day';
+        
+        const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+        
+        if(dateStr === todayStr) cell.classList.add('today');
+
+        // Check if date is past
+        const cellDate = new Date(currentYear, currentMonth, i);
+        cellDate.setHours(23,59,59,999);
+        const isPast = cellDate < new Date();
+
+        if (isPast && dateStr !== todayStr) cell.classList.add('past');
+
+        const dateNum = document.createElement('div');
+        dateNum.className = 'date-num';
+        dateNum.textContent = i;
+        cell.appendChild(dateNum);
+
+        // Find tickets for this day
+        const dayTickets = filtered.filter(t => t.dueDate === dateStr);
+        
+        if (dayTickets.length > 0) {
+          const dots = document.createElement('div');
+          dots.className = 'dots-container';
+          
+          dayTickets.forEach(t => {
+            const dot = document.createElement('div');
+            dot.className = 'ticket-dot';
+            let color = '#95a5a6';
+            if(t.priority === 'media') color = '#f1c40f';
+            if(t.priority === 'alta') color = '#e67e22';
+            if(t.priority === 'urgente') {
+               color = '#e74c3c';
+               dot.classList.add('urgent-pulse');
+            }
+            dot.style.backgroundColor = color;
+            dots.appendChild(dot);
+          });
+          cell.appendChild(dots);
+        }
+
+        cell.addEventListener('click', () => {
+          openDayModal(dateStr, dayTickets, isPast && dateStr !== todayStr);
+        });
+
+        grid.appendChild(cell);
+      }
+    }
+
+    function openDayModal(dateStr, tickets, readOnly) {
+      const [y, m, d] = dateStr.split('-');
+      document.getElementById('day-modal-title').textContent = `Tickets: ${d}/${m}/${y}`;
+      
+      const list = document.getElementById('day-tickets-list');
+      list.innerHTML = '';
+      
+      if (tickets.length === 0) {
+        list.innerHTML = '<p style="text-align:center; color:var(--text-secondary);">No hay tickets para este día.</p>';
+      } else {
+        tickets.forEach(t => {
+          const div = document.createElement('div');
+          div.className = 'day-ticket-item';
+          
+          let priorityColor = '#95a5a6';
+          if(t.priority === 'media') priorityColor = '#f1c40f';
+          if(t.priority === 'alta') priorityColor = '#e67e22';
+          if(t.priority === 'urgente') priorityColor = '#e74c3c';
+
+          div.innerHTML = `
+            <div style="width: 4px; background-color: ${priorityColor}; align-self: stretch; margin-right: 12px; border-radius: 4px;"></div>
+            <div style="flex:1;">
+              <strong>${t.title}</strong>
+              <div style="font-size: 0.85rem; color: var(--text-secondary);">${t.status.toUpperCase()} - Asignado a: ${t.assignedTo || 'Nadie'}</div>
+            </div>
+            ${!readOnly ? `<button class="btn btn-outline btn-sm" onclick="editTicketFromDay('${t.id}')">Editar</button>` : ''}
+          `;
+          list.appendChild(div);
+        });
+      }
+
+      if (!readOnly) {
+        const addBtn = document.createElement('button');
+        addBtn.className = 'btn btn-primary btn-block';
+        addBtn.style.marginTop = '15px';
+        addBtn.textContent = '+ Agregar Ticket para este día';
+        addBtn.onclick = () => {
+          document.getElementById('calendar-day-modal').classList.add('hidden');
+          document.getElementById('new-ticket-btn').click();
+          document.getElementById('ticket-due').value = dateStr;
+        };
+        list.appendChild(addBtn);
+      }
+
+      document.getElementById('calendar-day-modal').classList.remove('hidden');
+    }
+
+    window.editTicketFromDay = (id) => {
+      document.getElementById('calendar-day-modal').classList.add('hidden');
+      const t = allTickets.find(x => x.id === id);
+      if(t) openTicketModal(t);
+    };
+
+    document.getElementById('prev-month').addEventListener('click', () => {
+      currentMonth--;
+      if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+      renderCalendar();
+    });
+
+    document.getElementById('next-month').addEventListener('click', () => {
+      currentMonth++;
+      if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+      renderCalendar();
+    });
+
+    // Init
+    fetchTickets();
+
+  </script>
+</body>
+</html>
