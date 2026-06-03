@@ -66,12 +66,13 @@ db.exec(`
 
 // --- Middleware ---
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
 // Redirect root to login
 app.get('/', (req, res) => {
   res.redirect('/login.html');
 });
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Simple Auth Middleware for API
 const authenticate = (req, res, next) => {
