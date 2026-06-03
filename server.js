@@ -31,6 +31,7 @@ const USERS = {
 const sessions = new Map(); // token -> username
 let messages = [];
 let pinnedMessage = null;
+const typingTimers = new Map();
 
 // --- DB Initialization ---
 if (!fs.existsSync(DATA_DIR)) {
@@ -111,17 +112,23 @@ app.post('/api/logout', (req, res) => {
 // Tickets
 app.get('/api/tickets', authenticate, (req, res) => {
   try {
-    const tickets = db.prepare('SELECT * FROM tickets').all();
+    const tickets = db.prepare(`
+      SELECT t.*, 
+        json_group_array(
+          CASE WHEN c.id IS NOT NULL 
+          THEN json_object('id', c.id, 'author', c.author, 'content', c.content, 'timestamp', c.timestamp)
+          ELSE NULL END
+        ) as comments
+      FROM tickets t
+      LEFT JOIN comments c ON c.ticketId = t.id
+      GROUP BY t.id
+    `).all();
+
     const formattedTickets = tickets.map(t => ({
       ...t,
-      tags: t.tags ? JSON.parse(t.tags) : []
+      tags: t.tags ? JSON.parse(t.tags) : [],
+      comments: t.comments ? JSON.parse(t.comments).filter(c => c !== null) : []
     }));
-    
-    // Get comments for each ticket
-    const allComments = db.prepare('SELECT * FROM comments').all();
-    formattedTickets.forEach(t => {
-      t.comments = allComments.filter(c => c.ticketId === t.id);
-    });
     
     res.json(formattedTickets);
   } catch (error) {
@@ -175,8 +182,12 @@ app.put('/api/tickets/:id', authenticate, (req, res) => {
     stmt.run(title, description, assignedTo, status, priority, dueDate, JSON.stringify(tags || []), linkedProperty, now, id);
     
     // Notify if newly assigned
+    const updatedTicket = db.prepare('SELECT * FROM tickets WHERE id = ?').get(id);
     if (assignedTo && (!oldTicket || oldTicket.assignedTo !== assignedTo)) {
-       io.emit('ticket_assigned', { ticket: { id, title, assignedTo }, assignedTo });
+      io.emit('ticket_assigned', { 
+        ticket: { ...updatedTicket, tags: updatedTicket.tags ? JSON.parse(updatedTicket.tags) : [] }, 
+        assignedTo 
+      });
     }
     
     res.json({ success: true });
@@ -265,6 +276,19 @@ io.on('connection', (socket) => {
   
   socket.on('typing', (data) => {
     socket.broadcast.emit('user_typing', { username: user.username, isTyping: !!data.isTyping });
+    
+    if (data.isTyping) {
+      if (typingTimers.has(user.username)) clearTimeout(typingTimers.get(user.username));
+      typingTimers.set(user.username, setTimeout(() => {
+        socket.broadcast.emit('user_typing', { username: user.username, isTyping: false });
+        typingTimers.delete(user.username);
+      }, 3000));
+    } else {
+      if (typingTimers.has(user.username)) {
+        clearTimeout(typingTimers.get(user.username));
+        typingTimers.delete(user.username);
+      }
+    }
   });
   
   socket.on('pin_message', (data) => {
