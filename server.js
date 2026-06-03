@@ -82,7 +82,7 @@ const sendPushNotification = async (username, payload) => {
     try {
       await webpush.sendNotification(JSON.parse(s.subscription), JSON.stringify(payload));
     } catch (e) {
-      if (e.statusCode === 410) {
+      if (e.statusCode === 410 || e.statusCode === 404) {
         db.prepare('DELETE FROM push_subscriptions WHERE subscription = ?').run(s.subscription);
       }
     }
@@ -596,21 +596,6 @@ app.post('/api/push/subscribe', authenticate, (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
-
-async function sendPushNotification(username, payload) {
-  const subs = db.prepare('SELECT subscription FROM push_subscriptions WHERE username = ?').all(username);
-  
-  for (const subRow of subs) {
-    try {
-      const sub = JSON.parse(subRow.subscription);
-      await webpush.sendNotification(sub, JSON.stringify(payload));
-    } catch (e) {
-      if (e.statusCode === 410 || e.statusCode === 404) {
-        db.prepare('DELETE FROM push_subscriptions WHERE subscription = ?').run(subRow.subscription);
-      }
-    }
-  }
-}
 
 // --- Cron Job (Daily Due Tickets) ---
 cron.schedule('0 9 * * *', () => {
