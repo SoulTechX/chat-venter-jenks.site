@@ -68,6 +68,10 @@ db.exec(`
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
 // Simple Auth Middleware for API
 const authenticate = (req, res, next) => {
   const token = req.headers['authorization']?.split(' ')[1];
