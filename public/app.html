@@ -2,7 +2,7 @@
 <html lang="es" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Venter Jenks - Portal Interno</title>
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -151,6 +151,31 @@
     </section>
 
   </main>
+
+  <!-- Sidebar overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- Swipe hint indicator -->
+  <div class="swipe-hint" id="swipe-hint"></div>
+
+  <!-- Bottom Navigation Bar (mobile only) -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <div class="bottom-nav-items">
+      <button class="bottom-nav-btn active" id="bn-chat">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        <span class="bottom-nav-label">Chat</span>
+      </button>
+      <button class="bottom-nav-btn" id="bn-tickets">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        <span class="bottom-nav-label">Tickets</span>
+        <span class="bottom-nav-badge hidden" id="bn-ticket-badge">0</span>
+      </button>
+      <button class="bottom-nav-btn" id="bn-notif">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+        <span class="bottom-nav-label">Notif</span>
+      </button>
+    </div>
+  </nav>
 
   <!-- MODALS -->
   <div id="ticket-modal" class="modal hidden">
@@ -1090,6 +1115,112 @@
 
     initPushNotifications();
 
+  </script>
+
+  <!-- ═══ MOBILE UX ═══ -->
+  <script>
+  (function() {
+    const isMobile = () => window.innerWidth <= 768;
+    const sidebar   = document.getElementById('tickets-view');
+    const overlay   = document.getElementById('sidebar-overlay');
+    const swipeHint = document.getElementById('swipe-hint');
+    const bnChat    = document.getElementById('bn-chat');
+    const bnTickets = document.getElementById('bn-tickets');
+    const bnNotif   = document.getElementById('bn-notif');
+
+    function haptic(ms) { if (navigator.vibrate) navigator.vibrate(ms || 10); }
+
+    function openSidebar() {
+      sidebar.classList.add('open');
+      overlay.classList.add('active');
+      if (swipeHint) swipeHint.classList.add('hide');
+      if (bnTickets) bnTickets.classList.add('active');
+      if (bnChat) bnChat.classList.remove('active');
+      haptic(8);
+    }
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+      if (swipeHint) swipeHint.classList.remove('hide');
+      if (bnChat) bnChat.classList.add('active');
+      if (bnTickets) bnTickets.classList.remove('active');
+      haptic(8);
+    }
+
+    // 1. Overlay tap → close
+    if (overlay) overlay.addEventListener('click', closeSidebar);
+
+    // 2. Bottom nav
+    if (bnChat) bnChat.addEventListener('click', () => { if (isMobile()) { closeSidebar(); if(bnNotif) bnNotif.classList.remove('active'); } });
+    if (bnTickets) bnTickets.addEventListener('click', () => {
+      if (!isMobile()) return;
+      sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+      if(bnNotif) bnNotif.classList.remove('active');
+    });
+    if (bnNotif) bnNotif.addEventListener('click', () => {
+      if (!isMobile()) return;
+      closeSidebar();
+      if(bnChat) bnChat.classList.remove('active');
+      bnNotif.classList.add('active');
+      haptic(8);
+    });
+
+    // Legacy hamburger
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    if (menuBtn) menuBtn.addEventListener('click', () => { sidebar.classList.contains('open') ? closeSidebar() : openSidebar(); });
+
+    // 3. Swipe gesture
+    let tx = 0, ty = 0, swiping = false;
+    document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; swiping = false; }, { passive: true });
+    document.addEventListener('touchmove', e => {
+      if (!isMobile()) return;
+      const dx = e.touches[0].clientX - tx;
+      const dy = Math.abs(e.touches[0].clientY - ty);
+      if (dy < 50 && dx < -40 && tx > window.innerWidth - 60) swiping = true;  // swipe left from right edge → open
+      if (dy < 50 && dx > 60 && sidebar.classList.contains('open')) swiping = true; // swipe right → close
+    }, { passive: true });
+    document.addEventListener('touchend', () => {
+      if (!isMobile() || !swiping) return;
+      swiping = false;
+      sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+    }, { passive: true });
+
+    // 4. Visual viewport fix (keyboard)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => {
+        if (!isMobile()) return;
+        const ic = document.querySelector('.chat-input-container');
+        if (!ic) return;
+        const offset = window.innerHeight - window.visualViewport.height;
+        if (offset > 100) {
+          ic.style.transform = `translateY(-${offset}px)`;
+          ic.style.transition = 'transform 0.15s ease';
+          const msgs = document.getElementById('chat-messages');
+          if (msgs) setTimeout(() => msgs.scrollTop = msgs.scrollHeight, 150);
+        } else {
+          ic.style.transform = '';
+        }
+      });
+    }
+
+    // 5. Haptic on send & reactions
+    const sendBtn = document.getElementById('send-btn');
+    if (sendBtn) sendBtn.addEventListener('click', () => haptic(15), { passive: true });
+    document.addEventListener('click', e => {
+      if (e.target.closest('.reaction-bar span') || e.target.closest('.reaction-pill')) haptic(10);
+    }, { passive: true });
+
+    // 6. Ticket badge on bottom nav
+    function updateBadge() {
+      const badge = document.getElementById('bn-ticket-badge');
+      if (!badge || !isMobile()) return;
+      const n = document.querySelectorAll('.kanban-column[data-status="pendiente"] .kanban-card').length;
+      badge.textContent = n > 9 ? '9+' : n;
+      n > 0 ? badge.classList.remove('hidden') : badge.classList.add('hidden');
+    }
+    setInterval(updateBadge, 3000);
+    setTimeout(updateBadge, 1500);
+  })();
   </script>
 </body>
 </html>
