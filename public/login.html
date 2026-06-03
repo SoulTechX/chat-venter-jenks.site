@@ -12,6 +12,9 @@
   <link rel="apple-touch-icon" href="/logo.png">
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="stylesheet" href="style.css">
+  <!-- #14 FIX: preconnect Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { 
@@ -100,7 +103,7 @@
         <input type="text" id="username" required autocomplete="username">
       </div>
       <div class="form-group">
-        <label>Contraseña (cualquiera es válida)</label>
+        <label>Contraseña</label>
         <input type="password" id="password" required autocomplete="current-password">
       </div>
       <button type="submit" class="btn-login">Ingresar al Portal</button>
@@ -123,8 +126,12 @@
         const data = await res.json();
         
         if (res.ok) {
-          sessionStorage.setItem('vj_token', data.token);
-          sessionStorage.setItem('vj_user', JSON.stringify(data.user));
+          // #12 FIX: localStorage para sesión persistente (30 días)
+          localStorage.setItem('vj_token', data.token);
+          localStorage.setItem('vj_user', JSON.stringify(data.user));
+          // Limpiar sessionStorage viejo si existe
+          sessionStorage.removeItem('vj_token');
+          sessionStorage.removeItem('vj_user');
           window.location.href = 'app.html';
         } else {
           errorMsg.textContent = data.error || 'Error al iniciar sesión';

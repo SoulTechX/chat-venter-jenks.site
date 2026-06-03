@@ -11,7 +11,12 @@
   <link rel="manifest" href="/manifest.json">
   <link rel="apple-touch-icon" href="/logo.png">
   <link rel="stylesheet" href="style.css">
+  <!-- #14 FIX: preconnect para reducir latencia de Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- #6 FIX: DOMPurify para sanear HTML antes de innerHTML -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -99,7 +104,8 @@
           <span class="filter-label">Filtrar por:</span>
           <button class="filter-btn active" data-user="all">Todos</button>
           <button class="filter-btn" data-user="Mati">Mati</button>
-          <button class="filter-btn" data-user="Gise">Gise</button>
+          <!-- #15 FIX: Gise → Gesi -->
+          <button class="filter-btn" data-user="Gesi">Gesi</button>
           <button class="filter-btn" data-user="Ema">Ema</button>
           <button class="filter-btn" data-user="Guille">Guille</button>
         </div>
@@ -205,7 +211,8 @@
               <select id="ticket-assigned">
                 <option value="">Sin asignar</option>
                 <option value="Mati">Mati</option>
-                <option value="Gise">Gise</option>
+                <!-- #15 FIX: Gise → Gesi -->
+                <option value="Gesi">Gesi</option>
                 <option value="Ema">Ema</option>
                 <option value="Guille">Guille</option>
               </select>
@@ -295,8 +302,9 @@
   <!-- APPLICATION LOGIC -->
   <script>
     // --- State & Auth ---
-    const token = sessionStorage.getItem('vj_token');
-    const userStr = sessionStorage.getItem('vj_user');
+    // #12 FIX: localStorage para que la sesión persista al cerrar el navegador
+    const token = localStorage.getItem('vj_token') || sessionStorage.getItem('vj_token');
+    const userStr = localStorage.getItem('vj_user') || sessionStorage.getItem('vj_user');
     
     if (!token || !userStr) {
       window.location.href = 'login.html';
@@ -463,7 +471,8 @@
         </div>
       `;
 
-      div.innerHTML = `
+      // #6 FIX: DOMPurify sanea el HTML antes de insertarlo (previene XSS)
+      div.innerHTML = DOMPurify.sanitize(`
         ${!isMine ? `<div class="message-avatar" style="background-color: ${msg.color}">${msg.avatar}</div>` : ''}
         <div class="message-content" style="position:relative;">
           <span class="swipe-reply-icon">↩️</span>
@@ -471,14 +480,14 @@
           ${replyHtml}
           <div class="message-bubble" style="background-color: ${isMine ? msg.color : ''}">
             ${safeText}
-            ${msg.type === 'image' ? `<div style="margin-top:0.5rem;"><img src="${msg.fileUrl}" style="max-height: 240px; border-radius: 8px; max-width: 100%; cursor: pointer;" onclick="window.open('${msg.fileUrl}', '_blank')"></div>` : ''}
+            ${msg.type === 'image' ? `<div style="margin-top:0.5rem;"><img src="${msg.fileUrl}" loading="lazy" style="max-height: 240px; border-radius: 8px; max-width: 100%; cursor: pointer;" onclick="window.open('${msg.fileUrl}', '_blank')"></div>` : ''}
             ${msg.type === 'file' ? `<div style="margin-top:0.5rem;"><a href="${msg.fileUrl}" target="_blank" style="display:inline-block; padding: 0.5rem; background: rgba(0,0,0,0.1); border-radius: 4px; text-decoration: none; color: inherit;">📎 ${msg.fileName} <small>(${(msg.fileSize/1024/1024).toFixed(2)} MB)</small></a></div>` : ''}
           </div>
           <div class="message-time">${formatTime(msg.timestamp)}</div>
           ${reactionsHtml}
           ${actionsHtml}
         </div>
-      `;
+      `, { ADD_ATTR: ['onclick', 'style', 'loading'], FORCE_BODY: false });
       
       // ── Swipe-to-reply gesture ────────────────────────────────────
       addSwipeReply(div, msg);
@@ -692,8 +701,16 @@
     };
     document.getElementById('cancel-reply-btn').onclick = window.cancelReply;
 
+    // #7 FIX: pin ahora envía el objeto completo del mensaje al servidor
     window.pinMessage = (messageId) => {
-      socket.emit('pin_message', { messageId });
+      // buscar el mensaje en el DOM para extraer su contenido
+      const msgEl = document.querySelector(`.message[data-id="${messageId}"]`);
+      const msgUser = msgEl?.querySelector('.message-user')?.textContent || '';
+      const msgText = msgEl?.querySelector('.message-bubble')?.textContent?.trim() || '';
+      socket.emit('pin_message', {
+        messageId,
+        message: { id: messageId, user: msgUser, text: msgText }
+      });
     };
 
     document.getElementById('unpin-btn').onclick = () => {

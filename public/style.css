@@ -2,8 +2,9 @@
 :root {
   /* Common variables */
   --font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  --accent: #2ecc71;
-  --accent-hover: #27ae60;
+  /* #16 FIX: color unificado con el branding de VJ */
+  --accent: #4a926a;
+  --accent-hover: #3a7a58;
   
   --priority-baja: #95a5a6;
   --priority-media: #f1c40f;
@@ -432,7 +433,8 @@ body {
   border: 1px solid var(--border-color);
   padding: 0.8rem 1rem;
   border-radius: 12px;
-  font-size: 0.95rem;
+  /* #19 FIX: 1rem mínimo para evitar zoom automático en iOS */
+  font-size: 1rem;
   position: relative;
   word-break: break-word;
 }
