@@ -260,13 +260,14 @@ body {
   flex: 1;
   display: flex;
   overflow: hidden;
-  /* FIX: sin padding-bottom aquí, lo maneja chat-container en mobile */
+  min-height: 0;
 }
 .view {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 /* 70/30 Unified Layout */
@@ -274,15 +275,16 @@ body {
   display: flex;
   flex-direction: row;
   height: 100%;
+  min-height: 0;
 }
 .unified-chat {
   flex: 7;
   border-right: 1px solid var(--border-color);
   min-width: 0;
-  /* FIX: necesita altura y flex column para que el scroll funcione */
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
 }
 .unified-sidebar {
   flex: 3;
@@ -299,7 +301,7 @@ body {
   .unified-chat {
     flex: 1;
     border-right: none;
-    /* FIX: altura correcta descontando navbar (54px mobile) y bottom-nav (70px) */
+    /* Bug 2/3: ensure full height for scroll on mobile */
     height: calc(100dvh - 54px);
   }
   .unified-sidebar {
@@ -341,16 +343,20 @@ body {
 }
 
 /* --- Chat View --- */
+/* Bug 1: padding-bottom aquí en vez de main-content, para que no tape el input */
 .chat-container {
   flex: 1;
   display: flex;
   flex-direction: column;
   position: relative;
-  /* FIX: min-height: 0 es crítico para que flex no rompa el overflow interno */
-  min-height: 0;
-  height: 100%;
+  min-height: 0;          /* Bug 2/3: clave para que flex calcule overflow */
+  padding-bottom: 0;      /* Bug 1: el sticky del input se encarga solo */
 }
-
+@media (max-width: 768px) {
+  .chat-container {
+    padding-bottom: 70px; /* Bug 1: espacio para la bottom nav */
+  }
+}
 .pinned-message {
   background-color: var(--panel-hover);
   border-bottom: 1px solid var(--border-color);
@@ -371,21 +377,17 @@ body {
   font-style: italic;
   margin-top: 2px;
 }
-
-/* FIX SCROLL: min-height:0 + overflow-y correcto */
+/* Bug 2/3: min-height:0 + overflow-y:scroll + iOS touch scroll */
 .chat-messages {
   flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
+  min-height: 0;
 }
-
 .message {
   display: flex;
   gap: 1rem;
@@ -553,7 +555,52 @@ body {
   margin-right: 5px;
 }
 
-/* Input Area — FIX: sticky al fondo, no tapado por bottom-nav */
+/* ── @Mention styles ──────────────────────────────────────────── */
+.mention-tag {
+  display: inline-block;
+  background: rgba(74, 146, 106, 0.2);
+  color: #4a926a;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 0 3px;
+  font-size: 0.95em;
+  transition: background 0.2s;
+}
+.mention-tag:hover {
+  background: rgba(74, 146, 106, 0.35);
+}
+
+/* Burbuja resaltada cuando te mencionan a vos */
+.message.mention-me .message-bubble {
+  border: 1.5px solid rgba(74, 146, 106, 0.7) !important;
+  box-shadow: 0 0 0 3px rgba(74, 146, 106, 0.12);
+}
+.message.theirs.mention-me .message-bubble {
+  background-color: rgba(74, 146, 106, 0.08) !important;
+}
+
+/* ── Swipe-to-reply icon ──────────────────────────────────────── */
+.swipe-reply-icon {
+  position: absolute;
+  left: -38px;
+  top: 50%;
+  transform: translateY(-50%) scale(0.6);
+  opacity: 0;
+  font-size: 1.3rem;
+  transition: opacity 0.15s, transform 0.15s;
+  pointer-events: none;
+  color: var(--accent);
+}
+.message.swiping .swipe-reply-icon {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+.message.mine .swipe-reply-icon {
+  left: auto;
+  right: -38px;
+}
+
+/* Input Area — Bug 1: sticky para que no quede tapado por la bottom nav */
 .chat-input-container {
   padding: 1rem 1.5rem;
   background-color: var(--panel-bg);
@@ -561,6 +608,9 @@ body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
 }
 .reply-preview {
   display: flex;
@@ -649,7 +699,6 @@ body {
   color: var(--text-secondary);
   font-style: italic;
   margin-bottom: 0.5rem;
-  flex-shrink: 0;
 }
 
 /* --- Tickets View --- */
@@ -1101,32 +1150,9 @@ body {
   .bottom-nav {
     display: flex !important;
   }
-
-  /* FIX: sin padding-bottom en main-content, el chat-container lo maneja */
   .main-content {
-    padding-bottom: 0;
+    padding-bottom: 70px; /* space for bottom nav */
   }
-
-  /* FIX: el chat-container tiene padding-bottom = altura del bottom-nav */
-  .chat-container {
-    padding-bottom: 70px;
-  }
-
-  /* FIX: el input se pega al fondo del chat-container, no flota suelto */
-  .chat-input-container {
-    position: sticky;
-    bottom: 0;
-    z-index: 10;
-    background-color: var(--panel-bg);
-    border-top: 1px solid var(--border-color);
-  }
-
-  /* FIX: chat-messages ocupa todo el espacio restante y scrollea */
-  .chat-messages {
-    overflow-y: scroll;
-    -webkit-overflow-scrolling: touch;
-  }
-
   /* Hide desktop nav tabs (now in bottom nav) */
   .nav-tabs {
     display: none;
@@ -1137,7 +1163,7 @@ body {
     height: 54px;
   }
   .user-name {
-    display: none;
+    display: none; /* hide name, show only avatar */
   }
 
   /* ── Touch Targets (min 44×44px) ── */

@@ -1,0 +1,26 @@
+{
+  "name": "Venter Jenks Portal",
+  "short_name": "VJ Portal",
+  "description": "Portal interno de chat y tickets de Venter Jenks Inmobiliaria",
+  "start_url": "/app.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d1f0d",
+  "theme_color": "#4a926a",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -465,13 +465,14 @@ app.post('/api/chat/message', authenticate, async (req, res) => {
   const { roomId = 'general', text, type = 'text', fileUrl, fileName, fileSize } = req.body;
   
   const msgId = uuidv4();
+  const sanitizedText = text?.trim()?.replace(/</g, "&lt;").replace(/>/g, "&gt;") || '';
   const newMessage = {
     id: msgId,
     userId: req.user.username.toLowerCase(),
     userName: req.user.username,
     color: req.user.color,
     avatar: req.user.username.charAt(0).toUpperCase(),
-    text: text?.trim()?.replace(/</g, "&lt;").replace(/>/g, "&gt;") || '',
+    text: sanitizedText,
     timestamp: new Date().toISOString(),
     type: type,
     replyTo: req.body.replyTo || null,
@@ -489,21 +490,45 @@ app.post('/api/chat/message', authenticate, async (req, res) => {
     io.emit('new_message', newMessage);
     res.status(201).json(newMessage);
     
-    const allUsers = db.prepare('SELECT username FROM users').all();
+    // Detect @mentions (e.g. @ema, @mati, @gesi, @guille)
+    const mentionRegex = /@(\w+)/gi;
+    const mentionedNames = [];
+    let match;
+    while ((match = mentionRegex.exec(sanitizedText)) !== null) {
+      mentionedNames.push(match[1].toLowerCase());
+    }
+    
+    const allUsers = db.prepare('SELECT username, displayName FROM users').all();
     for (const u of allUsers) {
-       if (u.username.toLowerCase() !== newMessage.userId.toLowerCase()) {
-         sendPushNotification(u.username, {
-            title: `Nuevo mensaje de ${newMessage.userName}`,
-            body: newMessage.text || 'Archivo adjunto',
-            tag: 'chat'
-         }).catch(console.error);
-       }
+      if (u.username.toLowerCase() === newMessage.userId.toLowerCase()) continue;
+      
+      const isMentioned = mentionedNames.includes(u.username.toLowerCase());
+      
+      if (isMentioned) {
+        // Priority mention notification — distinctive vibration pattern
+        sendPushNotification(u.username, {
+          title: `🚨 ${newMessage.userName} te mencionó`,
+          body: newMessage.text || 'Archivo adjunto',
+          tag: `mention-${msgId}`,
+          requireInteraction: true,
+          vibrate: [400, 100, 400, 100, 400]
+        }).catch(console.error);
+      } else {
+        // Standard chat notification
+        sendPushNotification(u.username, {
+          title: `Nuevo mensaje de ${newMessage.userName}`,
+          body: newMessage.text || 'Archivo adjunto',
+          tag: 'chat',
+          vibrate: [200, 100, 200]
+        }).catch(console.error);
+      }
     }
   } catch (error) {
     console.error('Error saving message:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
 
 app.post('/api/chat/upload', authenticate, (req, res) => {
   upload.single('file')(req, res, async (err) => {

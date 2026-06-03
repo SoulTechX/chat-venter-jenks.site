@@ -3,7 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#4a926a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="VJ Portal">
   <title>Venter Jenks - Portal Interno</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/logo.png">
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="/socket.io/socket.io.js"></script>
@@ -400,13 +406,27 @@
       return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
     }
 
+    // Parse @mentions in text and return HTML with highlighted tags
+    function parseMentions(text) {
+      return text.replace(/@(\w+)/g, (match) => {
+        return `<span class="mention-tag">${match}</span>`;
+      });
+    }
+
     // Render a single message
     function renderMessage(msg) {
-      const isMine = msg.user === currentUser.username;
+      const isMine = msg.userId === currentUser.username.toLowerCase() ||
+                     msg.user === currentUser.username;
       
       const div = document.createElement('div');
       div.className = `message ${isMine ? 'mine' : 'theirs'}`;
       div.dataset.id = msg.id;
+
+      // Check if current user is mentioned
+      const mentionRegex = new RegExp(`@${currentUser.username}`, 'i');
+      if (!isMine && msg.text && mentionRegex.test(msg.text)) {
+        div.classList.add('mention-me');
+      }
 
       let replyHtml = '';
       if (msg.replyTo) {
@@ -426,9 +446,13 @@
       }
       reactionsHtml += '</div>';
 
+      const safeText = parseMentions(msg.text || '');
+      const safeUser = (msg.user || '').replace(/'/g, "\\'");
+      const safeRaw  = (msg.text || '').replace(/'/g, "\\'");
+
       const actionsHtml = `
         <div class="message-actions">
-          <button class="action-btn" onclick="startReply('${msg.id}', '${msg.user}', '${msg.text.replace(/'/g, "\\'")}')">↩️</button>
+          <button class="action-btn" onclick="startReply('${msg.id}', '${safeUser}', '${safeRaw}')">↩️</button>
           <button class="action-btn" onclick="pinMessage('${msg.id}')">📌</button>
           <div class="reaction-trigger">
             <button class="action-btn">😊</button>
@@ -441,11 +465,12 @@
 
       div.innerHTML = `
         ${!isMine ? `<div class="message-avatar" style="background-color: ${msg.color}">${msg.avatar}</div>` : ''}
-        <div class="message-content">
+        <div class="message-content" style="position:relative;">
+          <span class="swipe-reply-icon">↩️</span>
           ${!isMine ? `<div class="message-user" style="color: ${msg.color}">${msg.user}</div>` : ''}
           ${replyHtml}
           <div class="message-bubble" style="background-color: ${isMine ? msg.color : ''}">
-            ${msg.text}
+            ${safeText}
             ${msg.type === 'image' ? `<div style="margin-top:0.5rem;"><img src="${msg.fileUrl}" style="max-height: 240px; border-radius: 8px; max-width: 100%; cursor: pointer;" onclick="window.open('${msg.fileUrl}', '_blank')"></div>` : ''}
             ${msg.type === 'file' ? `<div style="margin-top:0.5rem;"><a href="${msg.fileUrl}" target="_blank" style="display:inline-block; padding: 0.5rem; background: rgba(0,0,0,0.1); border-radius: 4px; text-decoration: none; color: inherit;">📎 ${msg.fileName} <small>(${(msg.fileSize/1024/1024).toFixed(2)} MB)</small></a></div>` : ''}
           </div>
@@ -455,9 +480,54 @@
         </div>
       `;
       
+      // ── Swipe-to-reply gesture ────────────────────────────────────
+      addSwipeReply(div, msg);
+
       chatMessages.appendChild(div);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
+
+    // Swipe-to-reply: drag bubble right to trigger reply
+    function addSwipeReply(div, msg) {
+      let startX = 0, startY = 0, currentX = 0, triggered = false;
+      const bubble = div.querySelector('.message-content');
+      if (!bubble) return;
+
+      div.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        triggered = false;
+        bubble.style.transition = 'none';
+      }, { passive: true });
+
+      div.addEventListener('touchmove', (e) => {
+        const dx = e.touches[0].clientX - startX;
+        const dy = Math.abs(e.touches[0].clientY - startY);
+        if (dy > 30) return; // vertical scroll, ignore
+        if (dx < 0) return;  // only swipe right
+        currentX = Math.min(dx, 80);
+        bubble.style.transform = `translateX(${currentX}px)`;
+        if (currentX > 40) {
+          div.classList.add('swiping');
+          if (!triggered && currentX >= 60) {
+            triggered = true;
+            if (navigator.vibrate) navigator.vibrate(15);
+          }
+        } else {
+          div.classList.remove('swiping');
+        }
+      }, { passive: true });
+
+      div.addEventListener('touchend', () => {
+        bubble.style.transition = 'transform 0.25s ease';
+        bubble.style.transform = '';
+        div.classList.remove('swiping');
+        if (triggered) {
+          startReply(msg.id, msg.user || msg.userName, msg.text || '');
+        }
+      }, { passive: true });
+    }
+
 
     // Socket listeners
     socket.on('initial_state', async (data) => {
@@ -479,13 +549,14 @@
     });
 
     socket.on('user_typing', (data) => {
-      if (data.username !== currentUser.username) {
-        if (data.isTyping) {
-          typingInd.querySelector('span').textContent = data.username;
-          typingInd.classList.remove('hidden');
-        } else {
-          typingInd.classList.add('hidden');
-        }
+      // Bug 4: el servidor puede emitir username en distintos campos según la versión
+      const typingName = data.username || data.user || data.name || '';
+      if (!typingName || typingName === currentUser.username) return;
+      if (data.isTyping) {
+        typingInd.querySelector('span').textContent = typingName;
+        typingInd.classList.remove('hidden');
+      } else {
+        typingInd.classList.add('hidden');
       }
     });
 
