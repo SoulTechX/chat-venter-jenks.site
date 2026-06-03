@@ -67,9 +67,9 @@ db.exec(`
 // --- Middleware ---
 app.use(express.json());
 
-// Redirect root to login
+// Serve login page at root
 app.get('/', (req, res) => {
-  res.redirect('/login.html');
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
