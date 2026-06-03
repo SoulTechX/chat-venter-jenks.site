@@ -427,7 +427,7 @@
     // Render a single message
     function renderMessage(msg) {
       const isMine = msg.userId === currentUser.username.toLowerCase() ||
-                     msg.user === currentUser.username;
+                     (msg.user || msg.userName) === currentUser.username;
       
       const div = document.createElement('div');
       div.className = `message ${isMine ? 'mine' : 'theirs'}`;
@@ -443,7 +443,7 @@
       if (msg.replyTo) {
         replyHtml = `
           <div class="message-reply-preview">
-            <span class="reply-user">${msg.replyTo.user}</span>
+            <span class="reply-user">${msg.replyTo.user || msg.replyTo.userName || ''}</span>
             <span class="reply-text">${msg.replyTo.text}</span>
           </div>
         `;
@@ -458,7 +458,7 @@
       reactionsHtml += '</div>';
 
       const safeText = parseMentions(msg.text || '');
-      const safeUser = (msg.user || '').replace(/'/g, "\\'");
+      const safeUser = (msg.user || msg.userName || '').replace(/'/g, "\\'");
       const safeRaw  = (msg.text || '').replace(/'/g, "\\'");
 
       const actionsHtml = `
@@ -479,7 +479,7 @@
         ${!isMine ? `<div class="message-avatar" style="background-color: ${msg.color}">${msg.avatar}</div>` : ''}
         <div class="message-content" style="position:relative;">
           <span class="swipe-reply-icon">↩️</span>
-          ${!isMine ? `<div class="message-user" style="color: ${msg.color}">${msg.user}</div>` : ''}
+          ${!isMine ? `<div class="message-user" style="color: ${msg.color}">${msg.user || msg.userName || ''}</div>` : ''}
           ${replyHtml}
           <div class="message-bubble" style="background-color: ${isMine ? msg.color : ''}">
             ${safeText}
@@ -724,7 +724,7 @@
     function updatePinned(msg) {
       const container = document.getElementById('pinned-message-container');
       if (msg) {
-        document.getElementById('pinned-text').textContent = `${msg.user}: ${msg.text}`;
+        document.getElementById('pinned-text').textContent = `${msg.user || msg.userName || ''}: ${msg.text}`;
         container.classList.remove('hidden');
       } else {
         container.classList.add('hidden');
