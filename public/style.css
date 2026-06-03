@@ -1367,3 +1367,393 @@ body {
     opacity: 0;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   VISUAL DEPTH SYSTEM — Advanced CSS Rendering Enhancement
+   Cero cambios de layout · Cero cambios de variables · Solo rendering
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Keyframes ────────────────────────────────────────────────── */
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0);    opacity: 0.4; }
+  30%           { transform: translateY(-5px); opacity: 1;   }
+}
+
+@keyframes urgent-card-pulse {
+  0%   { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.04); }
+  50%  { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px rgba(0,0,0,.15), 0 0 18px -4px rgba(231,76,60,.45), inset 0 1px 0 rgba(255,255,255,.04); }
+  100% { box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.04); }
+}
+
+/* ── 2. Elevation system — Z levels ─────────────────────────────── */
+/* Z1 — kanban cards */
+.kanban-card {
+  box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px rgba(0,0,0,.15),
+              inset 0 1px 0 rgba(255,255,255,.04);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  will-change: transform;
+}
+.kanban-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.25), 0 1px 3px rgba(0,0,0,.2),
+              inset 0 1px 0 rgba(255,255,255,.06);
+}
+.kanban-card:active {
+  transform: translateY(0) scale(0.98);
+  transition-duration: 80ms;
+}
+
+/* Z2 — kanban columns */
+.kanban-column {
+  box-shadow: 0 4px 12px rgba(0,0,0,.25), 0 1px 3px rgba(0,0,0,.2);
+}
+
+/* Z3 — navbar (sticky header) */
+.navbar {
+  box-shadow: 0 8px 24px rgba(0,0,0,.3), 0 2px 6px rgba(0,0,0,.15);
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+/* Z4 — modals */
+.modal-content {
+  box-shadow: 0 24px 48px rgba(0,0,0,.5), 0 8px 16px rgba(0,0,0,.3);
+  border-image: none; /* reset before applying gradient border */
+}
+
+/* Message actions panel (Z2) */
+.message-actions {
+  box-shadow: 0 4px 12px rgba(0,0,0,.25), 0 1px 3px rgba(0,0,0,.2);
+}
+
+/* Emoji picker (Z3) */
+.emoji-picker {
+  box-shadow: 0 8px 24px rgba(0,0,0,.3), 0 2px 6px rgba(0,0,0,.15);
+}
+
+/* ── 3. Surface micro-gradients (dark mode) ──────────────────────── */
+html.dark .navbar,
+html.dark .kanban-column,
+html.dark .modal-content {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--panel-bg) 96%, white 4%) 0%,
+    var(--panel-bg) 100%
+  );
+}
+
+html.dark .kanban-card {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--bg-color) 96%, white 4%) 0%,
+    var(--bg-color) 100%
+  );
+}
+
+/* Light mode — gradient reversed */
+html.light .navbar,
+html.light .kanban-column,
+html.light .modal-content {
+  background: linear-gradient(
+    340deg,
+    color-mix(in srgb, var(--panel-bg) 97%, black 3%) 0%,
+    var(--panel-bg) 100%
+  );
+}
+
+html.light .kanban-card {
+  background: linear-gradient(
+    340deg,
+    color-mix(in srgb, var(--bg-color) 97%, black 3%) 0%,
+    var(--bg-color) 100%
+  );
+}
+
+/* ── 4. Priority bar — glow cromático 6px ───────────────────────── */
+.priority-bar {
+  width: 6px; /* was 4px */
+}
+
+/* Lateral glow per priority */
+.priority-bar[style*="var(--priority-baja)"],
+.priority-bar[data-priority="baja"] {
+  box-shadow: 3px 0 12px -2px rgba(149, 165, 166, 0.6);
+}
+.priority-bar[style*="var(--priority-media)"],
+.priority-bar[data-priority="media"] {
+  box-shadow: 3px 0 12px -2px rgba(241, 196, 15, 0.6);
+}
+.priority-bar[style*="var(--priority-alta)"],
+.priority-bar[data-priority="alta"] {
+  box-shadow: 3px 0 12px -2px rgba(230, 126, 34, 0.6);
+}
+.priority-bar[style*="var(--priority-urgente)"],
+.priority-bar[data-priority="urgente"] {
+  box-shadow: 3px 0 12px -2px rgba(231, 76, 60, 0.6);
+  animation: pulse-border 2s infinite;
+}
+
+/* Cards urgentes: top border gradient + animated card glow */
+.kanban-card:has(.priority-bar[data-priority="urgente"]),
+.kanban-card:has(.priority-urgent) {
+  border-top: 1px solid;
+  border-image: linear-gradient(90deg, rgba(231,76,60,.8), transparent) 1;
+  animation: urgent-card-pulse 3s ease-in-out infinite;
+}
+
+/* ── 5. Calendario con semántica visual ─────────────────────────── */
+.calendar-day {
+  border-radius: 10px;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+/* Día actual — doble ring */
+.calendar-day.today {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 1px var(--accent), 0 0 16px rgba(74,146,106,.15);
+}
+
+/* Días pasados — recesión visual */
+.calendar-day.past {
+  opacity: 0.45;
+  filter: saturate(0.6);
+}
+
+/* Dots más grandes con glow */
+.ticket-dot {
+  width: 10px;
+  height: 10px;
+  box-shadow: 0 0 6px currentColor;
+}
+
+/* ── 6. Focus states y affordances de input ─────────────────────── */
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  box-shadow: 0 0 0 3px rgba(74,146,106,.2), 0 0 0 1px var(--accent);
+}
+
+.input-row input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(74,146,106,.2), 0 0 0 1px var(--accent);
+}
+
+/* btn-primary glow */
+.btn-primary {
+  box-shadow: 0 4px 14px rgba(74,146,106,.35);
+  transition: background-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+.btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(74,146,106,.5);
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: 0 2px 8px rgba(74,146,106,.25);
+  transition-duration: 80ms;
+}
+
+/* ── 7. Backdrop-filter surfaces (desktop only) ─────────────────── */
+@media (min-width: 769px) {
+  .navbar {
+    background-color: rgba(0,0,0,0); /* transparent to let backdrop show */
+    backdrop-filter: blur(12px) saturate(1.4);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  }
+  html.dark .navbar {
+    background-color: rgba(26, 58, 26, 0.85);
+  }
+  html.light .navbar {
+    background-color: rgba(255, 255, 255, 0.85);
+  }
+
+  .tickets-header {
+    backdrop-filter: blur(12px) saturate(1.4);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  }
+  html.dark .tickets-header {
+    background-color: rgba(26, 58, 26, 0.85);
+  }
+  html.light .tickets-header {
+    background-color: rgba(255, 255, 255, 0.85);
+  }
+}
+
+/* Mobile: navbar sí tiene backdrop (elemento estático), tickets-header no */
+@media (max-width: 768px) {
+  .navbar {
+    backdrop-filter: blur(12px) saturate(1.4);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  }
+  html.dark .navbar  { background-color: rgba(26, 58, 26, 0.95); }
+  html.light .navbar { background-color: rgba(255, 255, 255, 0.95); }
+
+  /* tickets-header: fallback sin backdrop en mobile */
+  html.dark .tickets-header  { background-color: rgba(26, 58, 26, 0.98); }
+  html.light .tickets-header { background-color: rgba(255, 255, 255, 0.98); }
+}
+
+/* Navbar bottom border gradient */
+.navbar {
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(90deg, transparent, var(--border-color), transparent) 1;
+}
+
+/* ── 8. Typing indicator — animated dots ────────────────────────── */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-style: normal;
+  min-height: 28px;
+}
+
+/* Hide the old text span, show dots instead */
+.typing-indicator > span {
+  display: none;
+}
+
+/* Three animated dots injected via pseudo on the indicator itself */
+.typing-indicator::before {
+  content: '';
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* Use a wrapper approach — override with actual dot spans via CSS */
+.typing-dots {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  margin-left: 4px;
+}
+.typing-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  opacity: 0.4;
+  animation: typing-bounce 1.4s ease-in-out infinite;
+  display: inline-block;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.30s; }
+
+/* Typing name label */
+.typing-name {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* ── 9. Pinned message — identidad visual ───────────────────────── */
+.pinned-message {
+  border-left: 3px solid var(--accent);
+  box-shadow: inset 4px 0 12px rgba(74,146,106,.08);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--panel-hover) 90%, #4a926a 10%) 0px,
+    color-mix(in srgb, var(--panel-hover) 90%, #4a926a 10%) 40px,
+    var(--panel-hover) 200px
+  );
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* ── 10. Reaction pills — glass effect ──────────────────────────── */
+.reaction-pill {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  background-color: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.2s, border-color 0.2s;
+}
+html.light .reaction-pill {
+  background-color: rgba(0,0,0,.04);
+  border-color: rgba(0,0,0,.1);
+}
+.reaction-pill:hover {
+  transform: scale(1.08);
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(74,146,106,.2);
+}
+.reaction-pill:active {
+  transform: scale(0.95);
+  transition-duration: 80ms;
+}
+
+/* Tags — letter-spacing y borde translúcido */
+.tag {
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(255,255,255,.12);
+  transition: border-color 0.15s;
+}
+html.light .tag {
+  border-color: rgba(0,0,0,.1);
+}
+
+/* ── 11. Mobile adaptations ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Sombras Z3/Z4 simplificadas en mobile */
+  .navbar {
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  }
+  .modal-content {
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
+
+  /* Calendario: border-radius y dots más chicos */
+  .calendar-day {
+    border-radius: 6px;
+  }
+  .ticket-dot {
+    width: 8px;
+    height: 8px;
+    box-shadow: none; /* disable glow — aliasing en pantallas variables */
+  }
+
+  /* Hover → active en touch (más honesto) */
+  .kanban-card:hover {
+    transform: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px rgba(0,0,0,.15),
+                inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  .kanban-card:active {
+    transform: scale(0.97);
+    transition: transform 80ms, box-shadow 80ms;
+  }
+  .btn-primary:hover {
+    transform: none;
+    box-shadow: 0 4px 14px rgba(74,146,106,.35);
+  }
+  .btn-primary:active {
+    transform: scale(0.97);
+    transition-duration: 80ms;
+  }
+  .reaction-pill:hover {
+    transform: none;
+  }
+  .reaction-pill:active {
+    transform: scale(0.95);
+  }
+  .filter-btn:hover {
+    background-color: transparent;
+  }
+  .filter-btn:active {
+    background-color: var(--panel-hover);
+    transform: scale(0.97);
+    transition: transform 80ms;
+  }
+
+  /* will-change solo durante drag en mobile */
+  .kanban-card {
+    will-change: auto;
+  }
+  .kanban-card.dragging {
+    will-change: transform;
+  }
+}
+

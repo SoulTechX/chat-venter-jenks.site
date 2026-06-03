@@ -64,7 +64,10 @@
         </div>
         
         <div class="typing-indicator hidden" id="typing-indicator">
-          <span></span> está escribiendo...
+          <span class="typing-name" id="typing-name"></span>
+          <div class="typing-dots">
+            <span></span><span></span><span></span>
+          </div>
         </div>
 
         <div class="chat-input-container">
@@ -562,11 +565,12 @@
       const typingName = data.username || data.user || data.name || '';
       if (!typingName || typingName === currentUser.username) return;
       if (data.isTyping) {
-        typingInd.querySelector('span').textContent = typingName;
+        document.getElementById('typing-name').textContent = typingName;
         typingInd.classList.remove('hidden');
       } else {
         typingInd.classList.add('hidden');
       }
+
     });
 
     socket.on('message_pinned', (data) => {
