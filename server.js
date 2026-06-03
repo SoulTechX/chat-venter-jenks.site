@@ -67,11 +67,12 @@ db.exec(`
 
 // --- Middleware ---
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Simple Auth Middleware for API
 const authenticate = (req, res, next) => {
