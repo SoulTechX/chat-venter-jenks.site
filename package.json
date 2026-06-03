@@ -8,10 +8,15 @@
     "dev": "node server.js"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "better-sqlite3": "^11.7.0",
+    "dotenv": "^17.4.2",
     "express": "^4.21.0",
+    "multer": "^2.1.1",
+    "node-cron": "^4.2.1",
     "socket.io": "^4.8.0",
-    "uuid": "^10.0.0"
+    "uuid": "^10.0.0",
+    "web-push": "^3.6.7"
   },
   "engines": {
     "node": ">=20.0.0"

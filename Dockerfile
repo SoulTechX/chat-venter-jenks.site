@@ -8,6 +8,6 @@ COPY package*.json ./
 RUN apk add --no-cache python3 make g++
 RUN npm install --production
 COPY . .
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data /data/chat /uploads/chat
 EXPOSE 3000
 CMD ["node", "server.js"]

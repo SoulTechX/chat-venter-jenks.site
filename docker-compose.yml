@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - chat_history:/data/chat
+      - chat_uploads:/uploads/chat
+    environment:
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
+      - VAPID_EMAIL=${VAPID_EMAIL}
+      - UPLOAD_DIR=/uploads/chat
+      - CHAT_HISTORY_DIR=/data/chat
+      - MAX_UPLOAD_SIZE_MB=25
+      - MAX_DAILY_UPLOAD_GB=2
+      - CHAT_RETENTION_DAYS=5
+      - TZ=America/Argentina/Buenos_Aires
+      - NODE_ENV=production
+      - PORT=3000
+
+volumes:
+  chat_history:
+  chat_uploads:
