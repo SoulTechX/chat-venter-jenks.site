@@ -411,6 +411,32 @@
     };
     document.addEventListener('click', () => emojiPicker.classList.add('hidden'));
 
+    // Helper function to append authentication token to media & download URLs
+    function getAuthUrl(url) {
+      if (!url) return '';
+      if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+      const currentToken = localStorage.getItem('vj_token') || sessionStorage.getItem('vj_token') || (typeof token !== 'undefined' ? token : '');
+      if (!currentToken) return url;
+      const separator = url.includes('?') ? '&' : '?';
+      return `${url}${separator}token=${encodeURIComponent(currentToken)}`;
+    }
+
+    // Toggle reaction picker for touch devices
+    window.toggleReactionPicker = function(btn) {
+      const trigger = btn.closest('.reaction-trigger');
+      if (trigger) {
+        document.querySelectorAll('.reaction-trigger.active').forEach(el => {
+          if (el !== trigger) el.classList.remove('active');
+        });
+        trigger.classList.toggle('active');
+      }
+    };
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.reaction-trigger')) {
+        document.querySelectorAll('.reaction-trigger.active').forEach(el => el.classList.remove('active'));
+      }
+    });
+
     // Formatting date
     function formatTime(iso) {
       const d = new Date(iso);
@@ -441,10 +467,12 @@
 
       let replyHtml = '';
       if (msg.replyTo) {
+        const safeReplyUser = DOMPurify.sanitize(msg.replyTo.user || msg.replyTo.userName || '');
+        const safeReplyText = DOMPurify.sanitize(msg.replyTo.text || '');
         replyHtml = `
           <div class="message-reply-preview">
-            <span class="reply-user">${msg.replyTo.user || msg.replyTo.userName || ''}</span>
-            <span class="reply-text">${msg.replyTo.text}</span>
+            <span class="reply-user">${safeReplyUser}</span>
+            <span class="reply-text">${safeReplyText}</span>
           </div>
         `;
       }
@@ -457,16 +485,17 @@
       }
       reactionsHtml += '</div>';
 
-      const safeText = parseMentions(msg.text || '');
+      const sanitizedText = DOMPurify.sanitize(msg.text || '');
+      const safeText = parseMentions(sanitizedText);
       const safeUser = (msg.user || msg.userName || '').replace(/'/g, "\\'");
-      const safeRaw  = (msg.text || '').replace(/'/g, "\\'");
+      const safeRaw  = (msg.text || '').replace(/'/g, "\\'").replace(/\r?\n/g, ' ');
 
       const actionsHtml = `
         <div class="message-actions">
           <button class="action-btn" onclick="startReply('${msg.id}', '${safeUser}', '${safeRaw}')">↩️</button>
           <button class="action-btn" onclick="pinMessage('${msg.id}')">📌</button>
           <div class="reaction-trigger">
-            <button class="action-btn">😊</button>
+            <button class="action-btn" onclick="toggleReactionPicker(this)">😊</button>
             <div class="reaction-bar">
               ${['👍','❤️','😂','😮','😢'].map(e => `<span onclick="toggleReaction('${msg.id}', '${e}')">${e}</span>`).join('')}
             </div>
@@ -474,7 +503,8 @@
         </div>
       `;
 
-      // #6 FIX: DOMPurify sanea el HTML antes de insertarlo (previene XSS)
+      const authMediaUrl = getAuthUrl(msg.fileUrl);
+
       div.innerHTML = DOMPurify.sanitize(`
         ${!isMine ? `<div class="message-avatar" style="background-color: ${msg.color}">${msg.avatar}</div>` : ''}
         <div class="message-content" style="position:relative;">
@@ -483,14 +513,14 @@
           ${replyHtml}
           <div class="message-bubble" style="background-color: ${isMine ? msg.color : ''}">
             ${safeText}
-            ${msg.type === 'image' ? `<div style="margin-top:0.5rem;"><img src="${msg.fileUrl}" loading="lazy" style="max-height: 240px; border-radius: 8px; max-width: 100%; cursor: pointer;" onclick="window.open('${msg.fileUrl}', '_blank')"></div>` : ''}
-            ${msg.type === 'file' ? `<div style="margin-top:0.5rem;"><a href="${msg.fileUrl}" target="_blank" style="display:inline-block; padding: 0.5rem; background: rgba(0,0,0,0.1); border-radius: 4px; text-decoration: none; color: inherit;">📎 ${msg.fileName} <small>(${(msg.fileSize/1024/1024).toFixed(2)} MB)</small></a></div>` : ''}
+            ${msg.type === 'image' ? `<div style="margin-top:0.5rem;"><img src="${authMediaUrl}" loading="lazy" style="max-height: 240px; border-radius: 8px; max-width: 100%; cursor: pointer;" onclick="window.open('${authMediaUrl}', '_blank')"></div>` : ''}
+            ${msg.type === 'file' ? `<div style="margin-top:0.5rem;"><a href="${authMediaUrl}" target="_blank" style="display:inline-block; padding: 0.5rem; background: rgba(0,0,0,0.1); border-radius: 4px; text-decoration: none; color: inherit;">📎 ${DOMPurify.sanitize(msg.fileName || 'archivo')} <small>(${((msg.fileSize || 0)/1024/1024).toFixed(2)} MB)</small></a></div>` : ''}
           </div>
           <div class="message-time">${formatTime(msg.timestamp)}</div>
           ${reactionsHtml}
           ${actionsHtml}
         </div>
-      `, { ADD_ATTR: ['onclick', 'style', 'loading'], FORCE_BODY: false });
+      `, { ADD_ATTR: ['onclick', 'style', 'loading', 'target'], FORCE_BODY: false });
       
       // ── Swipe-to-reply gesture ────────────────────────────────────
       addSwipeReply(div, msg);

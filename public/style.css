@@ -1755,5 +1755,48 @@ html.light .tag {
   .kanban-card.dragging {
     will-change: transform;
   }
+
+  /* Emoji picker & Reaction bar mobile optimization */
+  .emoji-picker {
+    position: fixed;
+    bottom: 75px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 92vw;
+    max-width: 340px;
+    margin-bottom: 0;
+    max-height: 230px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.45);
+    border-radius: 14px;
+    padding: 12px;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .emoji-picker span {
+    font-size: 1.7rem;
+    padding: 6px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  .reaction-trigger.active .reaction-bar {
+    display: flex;
+    z-index: 100;
+  }
+  .reaction-bar span {
+    min-width: 36px;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+  }
 }
 
