@@ -259,20 +259,25 @@ db.exec(`
   log('INFO', `[Startup] ${reactionsStore.size} mensajes con reacciones restaurados`);
 })();
 
-// Cargar usuarios por defecto automáticamente si la base de datos está vacía
+// Cargar y asegurar usuarios por defecto automáticamente
 (async function seedDefaultUsers() {
   try {
-    const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get();
-    if (!userCount || userCount.count === 0) {
-      log('INFO', '[Startup] Inicializando usuarios por defecto en la base de datos...');
-      const DEFAULT_USERS = [
-        { username: 'mati',   password: 'matih1',   displayName: 'Mati',   color: '#4A90D9' },
-        { username: 'ema',    password: 'emavj1',   displayName: 'Ema',    color: '#27AE60' },
-        { username: 'gesi',   password: 'gesih3',   displayName: 'Gesi',   color: '#E67E22' },
-        { username: 'gise',   password: 'gesih3',   displayName: 'Gise',   color: '#E67E22' },
-        { username: 'guille', password: 'guillea4', displayName: 'Guille', color: '#E74C3C' },
-      ];
-      for (const u of DEFAULT_USERS) {
+    log('INFO', '[Startup] Verificando e inicializando usuarios predeterminados...');
+    const DEFAULT_USERS = [
+      { username: 'mati',   password: 'matih1',   displayName: 'Mati',   color: '#4A90D9' },
+      { username: 'ema',    password: 'emavj1',   displayName: 'Ema',    color: '#27AE60' },
+      { username: 'gesi',   password: 'gesih3',   displayName: 'Gesi',   color: '#E67E22' },
+      { username: 'gise',   password: 'gesih3',   displayName: 'Gise',   color: '#E67E22' },
+      { username: 'guille', password: 'guillea4', displayName: 'Guille', color: '#E74C3C' },
+    ];
+    for (const u of DEFAULT_USERS) {
+      const existing = db.prepare('SELECT * FROM users WHERE username = ?').get(u.username);
+      let needsUpdate = !existing;
+      if (existing) {
+        const matches = await bcrypt.compare(u.password, existing.passwordHash);
+        if (!matches) needsUpdate = true;
+      }
+      if (needsUpdate) {
         const hash = await bcrypt.hash(u.password, 12);
         db.prepare(`
           INSERT INTO users (username, passwordHash, color, displayName)
@@ -282,11 +287,11 @@ db.exec(`
             displayName  = excluded.displayName,
             color        = excluded.color
         `).run(u.username, hash, u.color, u.displayName);
-        log('INFO', `[Startup] Usuario configurado automáticamente: ${u.displayName} (${u.username})`);
+        log('INFO', `[Startup] Usuario actualizado/creado: ${u.displayName} (${u.username})`);
       }
     }
   } catch (err) {
-    log('ERROR', `[Startup] Error inicializando usuarios: ${err.message}`);
+    log('ERROR', `[Startup] Error verificando usuarios: ${err.message}`);
   }
 })();
 
